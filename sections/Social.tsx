@@ -1,45 +1,58 @@
-import { JSX } from "preact";
-import { Social } from "../components/types.ts";
-import Icon from "../components/ui/Icon.tsx";
+import { useSection } from "deco/hooks/useSection.ts";
+import type { AppContext } from "../apps/site.ts";
 
-export interface Props {
-  social?: Social[];
+interface Props {
+  /**
+   * @format rich-text
+   */
+  title?: string;
+  /**
+   * @format rich-text
+   */
+  buttonText?: string;
+  showTitle?: boolean;
 }
 
-export default function Main(
-  {
-    social = [
-      { label: "Discord", href: "/" },
-      { label: "Facebook", href: "/" },
-      { label: "Instagram", href: "/" },
-      { label: "Linkedin", href: "/" },
-      { label: "Tiktok", href: "/" },
-      { label: "Twitter", href: "/" },
-      { label: "WhatsApp", href: "/" },
-    ],
-  }: Props,
-): JSX.Element | null {
+export async function action(
+  props: Props,
+  req: Request,
+  ctx: AppContext
+): Promise<Props> {
+  return { ...props, showTitle: true };
+}
+
+export function loader(props: Props) {
+  return props;
+}
+
+export default function HelloSection({
+  title = "Hello",
+  buttonText = "Click me now",
+  showTitle = false,
+}: Props) {
+  const generateSectionUrl = (props: Props, otherProps: { href?: string } = {}) => {
+    const sectionProps = {
+      ...otherProps,
+      props,
+    };
+    return useSection(sectionProps);
+  };
+
   return (
-    <div class="flex flex-col items-center max-w-[688px] mx-auto w-full lg:px-0 px-6">
-      {social && social?.length > 0 && (
-        <ul class="flex flex-row gap-4 items-center justify-center my-8">
-          {social?.map((link) => (
-            <li>
-              <a
-                target="_blank"
-                href={link.href}
-                title={link.label}
-              >
-                <Icon
-                  size={20}
-                  id={link.label}
-                  strokeWidth={2}
-                />
-              </a>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+    <section>
+      <div class="container text-center mx-auto py-12">
+        {showTitle && <h2 class="text-3xl font-bold mb-4">{title}</h2>}
+        <form
+          hx-post={generateSectionUrl({ title, buttonText, showTitle: false })}
+          hx-target="closest section"
+          hx-swap="innerHTML"
+          class="flex justify-center"
+        >
+          <button type="submit" class="btn btn-primary">
+            {buttonText}
+          </button>
+        </form>
+      </div>
+    </section>
   );
 }

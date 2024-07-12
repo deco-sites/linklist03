@@ -1,45 +1,79 @@
-import { ImageWidget } from "apps/admin/widgets.ts";
-import { Picture, Source } from "apps/website/components/Picture.tsx";
+import { useSection } from "deco/hooks/useSection.ts";
+import type { AppContext } from "../apps/site.ts";
+import type { HTMLWidget } from 'apps/admin/widgets.ts';
 
-export interface Picture {
-  mobile?: ImageWidget;
-  desktop?: ImageWidget;
-  alt?: string;
+interface Props {
+  /**
+   * @format rich-text
+   */
+  title?: string;
+  /**
+   * @format rich-text
+   * @title Input Placeholder
+   */
+  inputPlaceholder?: string;
+  /**
+   * @format rich-text
+   * @title Button Text
+   */
+  buttonText?: string;
+  content?: HTMLWidget;
 }
 
-export default function Image({
-  mobile =
-    "https://ozksgdmyrqcxcwhnbepg.supabase.co/storage/v1/object/public/assets/4959/2bb6e3b9-90e8-49b0-86ce-465d6856343e",
-  desktop =
-    "https://ozksgdmyrqcxcwhnbepg.supabase.co/storage/v1/object/public/assets/4959/89934286-9a29-4ebc-bc90-39117d2e7edb",
-  alt = "Image",
-}: Picture) {
+export async function action(
+  props: Props,
+  req: Request,
+  ctx: AppContext
+): Promise<Props> {
+  const form = await req.formData();
+  const response = `${form.get("response") ?? ""}`;
+  if (!response) {
+    return { ...props, content: { content: `You didn't answer.` } };
+  }
+  return { ...props, content: { content: `You answered: ${response}` } };
+}
+
+export function loader(props: Props) {
+  return props;
+}
+
+export default function FormSection({
+  title = "Say something",
+  inputPlaceholder = "Enter your text here...",
+  buttonText = "Submit",
+  content = { content: "Result will appear here." },
+}: Props) {
+
+  const generateSectionUrl = (props: Props, otherProps: { href?: string } = {}) => {
+    const sectionProps = {
+      ...otherProps,
+      props,
+    };
+    return useSection(sectionProps);
+  };
+
   return (
-    <div class="max-w-[688px] mx-auto py-2 w-full lg:px-0 px-6">
-      <figure class="relative">
-        <Picture>
-          <Source
-            media="(max-width: 327px)"
-            src={mobile || ""}
-            width={327}
-            height={344}
+    <section>
+      <div class="container text-center mx-auto py-12">
+        <h2 class="text-3xl font-bold mb-4">{title}</h2>
+        <form
+          hx-post={generateSectionUrl({ title, inputPlaceholder, buttonText, content })}
+          hx-target="closest section"
+          hx-swap="innerHTML"
+          class="flex justify-center"
+        >
+          <input
+            type="text"
+            name="response"
+            placeholder={inputPlaceholder}
+            class="input input-bordered w-full mb-4"
           />
-          <Source
-            media="(min-width: 688px)"
-            src={desktop ? desktop : mobile || ""}
-            width={688}
-            height={344}
-          />
-          <img
-            class="w-full object-cover"
-            sizes="(max-width: 640px) 100vw, 30vw"
-            src={mobile}
-            alt={alt}
-            decoding="async"
-            loading="lazy"
-          />
-        </Picture>
-      </figure>
-    </div>
+          <button type="submit" class="btn btn-primary">
+            {buttonText}
+          </button>
+        </form>
+        <div class="mt-12">{content?.content}</div>
+      </div>
+    </section>
   );
 }

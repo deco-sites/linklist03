@@ -1,44 +1,93 @@
-import { ImageWidget } from "apps/admin/widgets.ts";
-import Image from "apps/website/components/Image.tsx";
-import { JSX } from "preact";
+import { useSection } from "deco/hooks/useSection.ts";
+import type { AppContext } from "../apps/site.ts";
+
+interface Question {
+  /**
+   * @format rich-text
+   */
+  question: string;
+  /**
+   * @format rich-text
+   */
+  answer: string;
+}
 
 interface Props {
-  href?: string;
-  image?: ImageWidget;
-  alt?: string;
-  width?: number;
-  height?: number;
-  text?: string;
+  /**
+   * @format rich-text
+   */
+  title?: string;
+  /**
+   * @title Questions
+   */
+  questions: Question[];
 }
 
-function Footer({
-  image =
-    "https://ozksgdmyrqcxcwhnbepg.supabase.co/storage/v1/object/public/assets/4959/d7aa9290-074f-417c-99c3-5b0587c8c2ee",
-  href = "https://deco.cx/",
-  text = "Made with",
-  alt = "Made with deco.cx",
-  height = 20,
-  width = 50,
-}: Props): JSX.Element | null {
+export async function action(
+  props: Props,
+  req: Request,
+  ctx: AppContext
+): Promise<Props> {
+  const form = await req.formData();
+  const index = parseInt(form.get("index") ?? "-1", 10);
+  const questions = props.questions.map((question, i) => {
+    if (i === index) {
+      return { ...question, answer: form.get(`answer-${i}`) ?? "" };
+    }
+    return question;
+  });
+  return { ...props, questions };
+}
+
+export function loader(props: Props) {
+  return props;
+}
+
+export default function FaqSection({
+  title = "Frequently Asked Questions",
+  questions = [],
+}: Props) {
+  const generateSectionUrl = (props: Props, otherProps: { href?: string } = {}) => {
+    const sectionProps = {
+      ...otherProps,
+      props,
+    };
+    return useSection(sectionProps);
+  };
+
   return (
-    <div class="py-8 lg:px-0 px-6">
-      <a
-        href={href}
-        class="flex flex-row gap-1 items-center justify-center text-xs"
-        target="_blank"
-      >
-        {text && <p>{text}</p>}
-        {image && (
-          <Image
-            src={image || ""}
-            alt={alt || ""}
-            height={height || 20}
-            width={width || 50}
-          />
-        )}
-      </a>
-    </div>
+    <section>
+      <div class="container mx-auto py-12">
+        <h2 class="text-3xl font-bold mb-4">{title}</h2>
+        <div class="accordion">
+          {questions.map((question, index) => (
+            <div class="accordion-item">
+              <div class="accordion-header">
+                <h3>{question.question}</h3>
+              </div>
+              <div class="accordion-content">
+                <form
+                  hx-post={generateSectionUrl({ title, questions })}
+                  hx-target="closest .accordion-content"
+                  hx-swap="innerHTML"
+                >
+                  <textarea
+                    name={`answer-${index}`}
+                    class="textarea textarea-bordered w-full"
+                    rows={3}
+                  >
+                    {question.answer}
+                  </textarea>
+                  <input type="hidden" name="index" value={index} />
+                  <button type="submit" class="btn btn-primary mt-2">
+                    Save
+                  </button>
+                </form>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
-
-export default Footer;
